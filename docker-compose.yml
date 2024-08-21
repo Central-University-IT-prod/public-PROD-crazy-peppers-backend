@@ -1,0 +1,54 @@
+version: "3.9"
+services:
+  app:
+    build: .
+    image: team-x-prod-server
+    restart: always
+    environment:
+      DATABASE_URL: mongodb://secret@mongodb:27017/admin
+      PORT: 3000
+      secret: secret
+    ports:
+      - '3000:3000'
+    depends_on:
+      - mongodb
+    networks:
+      - team-x
+
+  mongodb:
+    image: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: aspowp3
+      MONGO_INITDB_ROOT_PASSWORD: a99as99a20a0f3
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - team-x
+
+  mongo-express:
+    image: mongo-express
+    restart: always
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: aspowp3
+      ME_CONFIG_MONGODB_ADMINPASSWORD: a99as99a20a0f3
+      ME_CONFIG_MONGODB_URL: mongodb://secret@mongodb:27017/
+      ME_CONFIG_BASICAUTH: true
+      ME_CONFIG_BASICAUTH_USERNAME: aspowp3
+      ME_CONFIG_BASICAUTH_PASSWORD: a99as99a20a0f3
+    depends_on:
+      - mongodb
+    networks:
+      - team-x
+
+networks:
+  team-x:
+    name: team-x
+    driver: bridge
+
+volumes:
+  mongodb-data:
+    name: mongodb-data
+    driver: local

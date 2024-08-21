@@ -1,0 +1,267 @@
+openapi: "3.0.2"
+info:
+  title: X API
+  version: "1.0"
+servers:
+  - url: http://localhost:8080/api
+paths:
+  /auth/login:
+    post:
+      summary: Аутентификация для получения токена
+      requestBody:
+        description: Данные для аутентификации пользователя.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                login:
+                  $ref: "#/components/schemas/userLogin"
+                password:
+                  $ref: "#/components/schemas/userPassword"
+              required:
+                - login
+                - password
+      responses:
+        "200":
+          description: Успешная аутентификация
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: Сгенерированный токен пользователя
+                    minLength: 20
+                    example: XXX
+                  is_admin:
+                    type: boolean
+                required:
+                  - token
+                  - is_admin
+        "401":
+          description: Пользователь с указанным логином и паролем не найден
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+  /olymp/create:
+    post:
+      summary: Создание новой олимпиады(пользователем-админом, который не создал олимпиаду)
+      security:
+        - bearerAuth: []
+      requestBody:
+        description: Данные для создания олимпиады
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "Hello Crazies!"
+                participants_count:
+                  type: integer
+                  minimum: 1
+                min_participants:
+                  type: integer
+                  minimum: 1
+                max_participants:
+                  type: integer
+                  minimum: 1
+                roles:
+                  $ref: "#/components/schemas/olympRoles"
+                tags:
+                  $ref: "#/components/schemas/tagsList"
+                deadline:
+                  type: string
+                  format: date-time
+              required:
+                - name
+                - min_participants
+                - max_participants
+                - roles
+                - tags
+                - deadline
+      responses:
+        "201":
+          description: Олимпиада успешно создана
+        "400":
+          description: Олимпиада не создана
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+
+
+
+  /olymp/get:
+    get:
+      summary: Получить олимпиаду по токену админа
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Информация об олимпиаде - название, дедлайн
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  deadline:
+                    type: integer
+                required:
+                  - name
+                  - deadline
+        "401":
+          description: Переданный токен не существует либо некорректен.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+        "404":
+          description: У данного адимина нет олимпиады (а значит надо бы создать)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+  /admin/users:
+    get:
+      summary: Получить список участников олимпиады(не подробный), которую создал этот админ
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Получение списка пользователей
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    login:
+                      type: string
+                    full_name:
+                      type: string
+                  required:
+                    - id
+                    - login
+        "401":
+          description: Переданный токен не существует либо некорректен.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+        "404":
+          description: У данного адимина нет олимпиады (а значит надо бы создать)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+  /admin/users/{uid}:
+    get:
+      summary: Получить полную информацию о пользователе
+      security:
+        - bearerAuth: []
+      parameters:            # <- List of parameters for this operation
+        - name: uid
+          in: path
+          required: true
+          description: The id of the user to retrieve
+      responses:
+        "200":
+          description: Все окей)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  full_name:
+                    type: string
+                  age:
+                    type: integer
+                    minimum: 0
+                  role:
+                    type: string
+                  tags:
+                    type: array
+                    items:
+                      type: string
+                  work_experience:
+                    type: string
+                  bio:
+                    type: string
+                  telegram:
+                    type: string
+                  gender:
+                    $ref: "#/components/schemas/gender"
+
+
+
+components:
+  schemas:
+    gender:
+      type: string
+      enum:
+        - m
+        - f
+        - ns
+    errorResponse:
+      type: object
+      description: Используется для возвращения ошибки пользователю
+      properties:
+        reason:
+          type: string
+          description: Описание ошибки в свободной форме
+          minLength: 5
+      required:
+        - reason
+      example:
+        reason: <объяснение, почему запрос пользователя не может быть обработан>
+    userLogin:
+      type: string
+      description: Логин пользователя
+    userPassword:
+      type: string
+    olympRoles:
+      type: array
+      items:
+        $ref: "#/components/schemas/olympRole"
+    olympRole:
+      type: object
+      properties:
+        name:
+          type: string
+        min_in_team:
+          type: integer
+          minimum: 0
+        max_in_team:
+          type: integer
+          minimum: 0
+      required:
+        - name
+        - min_in_team
+        - max_in_team
+    tagsList:
+      type: array
+      description: Список тегов.
+      items:
+        type: string
+        description: Значение тега.
+        example: Flutter
+      example:
+        - Flutter
+        - C++
+        - NestJS
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
